@@ -74,7 +74,14 @@ public class WalletController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Missing vp_token in decrypted payload"));
             }
 
-            walletResponseValidator.validate(vpToken);
+            Map<String, Object> presentationSubmission = (Map<String, Object>) jsonObject.get("presentation_submission");
+            if (presentationSubmission == null || !presentationSubmission.containsKey("definition_id")) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Missing presentation_submission or definition_id"));
+            }
+
+            String definitionId = presentationSubmission.get("definition_id").toString();
+
+            walletResponseValidator.validate(vpToken, definitionId);
 
             return ResponseEntity.ok(Map.of("message", "Wallet response received and validated successfully."));
         } catch (Exception e) {

@@ -1,5 +1,7 @@
 package com.example.verifier.service;
 
+import com.example.verifier.model.TransactionStatus;
+import com.example.verifier.storage.TransactionStore;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
@@ -13,8 +15,6 @@ import java.security.PublicKey;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.ECPublicKey;
-import java.time.LocalDate;
-import java.time.Period;
 import java.util.*;
 
 import java.util.Base64;
@@ -22,8 +22,14 @@ import java.util.Base64;
 @Service
 public class WalletResponseValidator {
 
-    public void validate(String vpTokenWithDisclosures) throws Exception {
+    private final TransactionStore transactionStore;
 
+    public WalletResponseValidator(TransactionStore transactionStore) {
+        this.transactionStore = transactionStore;
+    }
+
+    public void validate(String vpTokenWithDisclosures, String presentationDefinitionId) throws Exception {
+        System.out.println(vpTokenWithDisclosures);
         String[] parts = vpTokenWithDisclosures.split("~");
         if (parts.length < 2) {
             throw new RuntimeException("No disclosures or KeyBinding JWT found in vp_token!");
@@ -71,7 +77,8 @@ public class WalletResponseValidator {
 
             List<String> disclosureList = new ArrayList<>();
             for (int i = 0; i < disclosureArray.length(); i++) {
-                disclosureList.add(disclosureArray.getString(i));
+                Object element = disclosureArray.get(i);
+                disclosureList.add(element.toString());
             }
             parsedDisclosures.add(disclosureList);
         }
@@ -82,7 +89,7 @@ public class WalletResponseValidator {
             String claimName = disclosure.get(1);
             String claimValue = disclosure.get(2);
 
-            String canonicalJson = "[\"" + salt + "\", \"" + claimName + "\", \"" + claimValue + "\"]";
+            String canonicalJson = "[\"" + salt + "\", \"" + claimName + "\", " + claimValue + "]";
 
             byte[] utf8Bytes = canonicalJson.getBytes(StandardCharsets.UTF_8);
 
@@ -100,22 +107,28 @@ public class WalletResponseValidator {
             claims.put(claimName, claimValue);
         }
 
+        var maybeRecord = transactionStore.getByDefinitionId(presentationDefinitionId);
+        if (maybeRecord.isEmpty()) {
+            throw new RuntimeException("No transaction found for definition ID: " + presentationDefinitionId);
+        }
+        var record = maybeRecord.get();
+
         System.out.println("Claims received:");
         claims.forEach((k, v) -> System.out.println(k + ": " + v));
 
-        String birthdateStr = claims.get("birthdate");
-        if (birthdateStr == null) {
-            throw new RuntimeException("Birthdate claim not found!");
+        String ageStr = claims.get("age_in_years");
+        if (ageStr == null) {
+            throw new RuntimeException("age_in_years claim not found!");
         }
 
-        LocalDate birthdate = LocalDate.parse(birthdateStr);
-        LocalDate today = LocalDate.now();
-        int age = Period.between(birthdate, today).getYears();
+        int age = Integer.parseInt(claims.get("age_in_years"));
 
         if (age >= 18) {
-            System.out.println("User is over 18 years old (" + age + " years)");
+            System.out.println("User is over 18 years old.");
+            record.setStatus(TransactionStatus.ACCEPTED);
         } else {
-            System.out.println("User is under 18 years old (" + age + " years)");
+            System.out.println("User is under 18 years old.");
+            record.setStatus(TransactionStatus.DENIED);
         }
     }
 }
