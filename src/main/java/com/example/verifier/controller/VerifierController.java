@@ -42,4 +42,10 @@ public class VerifierController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/recent")
+    public ResponseEntity<List<Transaction>> getRecentTransactions() {
+        List<Transaction> recent = transactionRepository.findTop10ByOrderByLastUpdatedDesc();
+        return ResponseEntity.ok(recent);
+    }
+
 }
