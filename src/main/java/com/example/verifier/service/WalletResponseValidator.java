@@ -1,7 +1,7 @@
 package com.example.verifier.service;
 
 import com.example.verifier.model.TransactionStatus;
-import com.example.verifier.storage.TransactionStore;
+import com.example.verifier.repository.TransactionRepository;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
@@ -22,10 +22,10 @@ import java.util.Base64;
 @Service
 public class WalletResponseValidator {
 
-    private final TransactionStore transactionStore;
+    private final TransactionRepository transactionRepository;
 
-    public WalletResponseValidator(TransactionStore transactionStore) {
-        this.transactionStore = transactionStore;
+    public WalletResponseValidator(TransactionRepository transactionRepository) {
+        this.transactionRepository = transactionRepository;
     }
 
     public void validate(String vpTokenWithDisclosures, String presentationDefinitionId) throws Exception {
@@ -107,7 +107,8 @@ public class WalletResponseValidator {
             claims.put(claimName, claimValue);
         }
 
-        var maybeRecord = transactionStore.getByDefinitionId(presentationDefinitionId);
+        var maybeRecord = transactionRepository.findByPresentationDefinitionId(presentationDefinitionId);
+
         if (maybeRecord.isEmpty()) {
             throw new RuntimeException("No transaction found for definition ID: " + presentationDefinitionId);
         }
@@ -130,5 +131,7 @@ public class WalletResponseValidator {
             System.out.println("User is under 18 years old.");
             record.setStatus(TransactionStatus.DENIED);
         }
+
+        transactionRepository.save(record);
     }
 }

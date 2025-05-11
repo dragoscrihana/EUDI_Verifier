@@ -2,6 +2,7 @@ package com.example.verifier.controller;
 
 import com.example.verifier.model.PresentationStoredEntry;
 import com.example.verifier.service.CreateJarService;
+import com.example.verifier.service.EvidenceService;
 import com.example.verifier.service.JwtDecryptionService;
 import com.example.verifier.service.WalletResponseValidator;
 import com.example.verifier.storage.PresentationStore;
@@ -13,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.Map;
 
 @RestController
@@ -23,12 +25,14 @@ public class WalletController {
     private final CreateJarService createJarService;
     private final JwtDecryptionService jwtDecryptionService;
     private final WalletResponseValidator walletResponseValidator;
+    private final EvidenceService evidenceService;
 
-    public WalletController(PresentationStore presentationStore, CreateJarService createJarService, JwtDecryptionService jwtDecryptionService, WalletResponseValidator walletResponseValidator) {
+    public WalletController(PresentationStore presentationStore, CreateJarService createJarService, JwtDecryptionService jwtDecryptionService, WalletResponseValidator walletResponseValidator, EvidenceService evidenceService) {
         this.presentationStore = presentationStore;
         this.createJarService = createJarService;
         this.jwtDecryptionService = jwtDecryptionService;
         this.walletResponseValidator = walletResponseValidator;
+        this.evidenceService = evidenceService;
     }
 
     @GetMapping("/request.jwt/{requestId}")
@@ -82,6 +86,9 @@ public class WalletController {
             String definitionId = presentationSubmission.get("definition_id").toString();
 
             walletResponseValidator.validate(vpToken, definitionId);
+
+            Map<String, Object> walletResponse = objectMapper.readValue(decryptedJson, Map.class);
+            evidenceService.logWalletResponsePosted(definitionId, Instant.now().toEpochMilli(), walletResponse);
 
             return ResponseEntity.ok(Map.of("message", "Wallet response received and validated successfully."));
         } catch (Exception e) {

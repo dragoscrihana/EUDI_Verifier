@@ -20,12 +20,14 @@ public class CreateJarService {
     private final ECKey ecKey;
     private final String clientId;
     private final String audience;
+    private final EvidenceService evidenceService;
 
-    public CreateJarService(ECPrivateKey privateKey, ECKey ecKey) {
+    public CreateJarService(ECPrivateKey privateKey, ECKey ecKey, EvidenceService evidenceService) {
         this.privateKey = privateKey;
         this.ecKey = ecKey;
         this.clientId = "Verifier";
         this.audience = "https://self-issued.me/v2";
+        this.evidenceService = evidenceService;
     }
 
     public String createSignedRequestObject(Presentation.Requested presentation) throws Exception {
@@ -56,7 +58,11 @@ public class CreateJarService {
 
         signedJWT.sign(new ECDSASigner(privateKey));
 
-        return signedJWT.serialize();
+        String jwt = signedJWT.serialize();
+
+        evidenceService.logRequestObjectRetrieved(presentation.getPresentationDefinition().getId(), now.toEpochMilli(), jwt);
+
+        return jwt;
     }
 
     private Map<String, Object> buildClientMetadata(Presentation.Requested presentation) {
