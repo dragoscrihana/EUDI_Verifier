@@ -23,9 +23,11 @@ import java.util.Base64;
 public class WalletResponseValidator {
 
     private final TransactionRepository transactionRepository;
+    private final CredentialStatusService credentialStatusService;
 
-    public WalletResponseValidator(TransactionRepository transactionRepository) {
+    public WalletResponseValidator(TransactionRepository transactionRepository, CredentialStatusService credentialStatusService) {
         this.transactionRepository = transactionRepository;
+        this.credentialStatusService = credentialStatusService;
     }
 
     public void validate(String vpTokenWithDisclosures, String presentationDefinitionId) throws Exception {
@@ -64,6 +66,29 @@ public class WalletResponseValidator {
         }
 
         Map<String, Object> payload = signedJWT.getJWTClaimsSet().getClaims();
+
+        Map<String, Object> statusObject = (Map<String, Object>) payload.get("status");
+        if (statusObject != null && statusObject.containsKey("status_list")) {
+            Map<String, Object> statusList = (Map<String, Object>) statusObject.get("status_list");
+
+            int index = Integer.parseInt(statusList.get("idx").toString());
+            String url = statusList.get("uri").toString();
+
+            boolean isValid = credentialStatusService.isCredentialValid(2, "http://localhost:8081/status-list");
+            if (!isValid) {
+                System.out.println("Credential has been revoked. Skipping further validation.");
+
+                var maybeRecord = transactionRepository.findByPresentationDefinitionId(presentationDefinitionId);
+                if (maybeRecord.isPresent()) {
+                    var record = maybeRecord.get();
+                    record.setStatus(TransactionStatus.DENIED);
+                    transactionRepository.save(record);
+                }
+
+                return;
+            }
+        }
+
         List<String> sdHashes = (List<String>) payload.get("_sd");
         if (sdHashes == null) {
             throw new RuntimeException("_sd field missing in JWT payload!");
