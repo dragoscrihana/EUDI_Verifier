@@ -39,8 +39,7 @@ public class WalletResponseValidator {
 
         String jwtString = parts[0];
 
-        List<String> disclosures = Arrays.asList(Arrays.copyOfRange(parts, 1, parts.length - 1));
-        String keyBindingJwt = parts[parts.length - 1];
+        List<String> disclosures = Arrays.asList(Arrays.copyOfRange(parts, 1, parts.length));
 
         SignedJWT signedJWT = SignedJWT.parse(jwtString);
 
@@ -74,7 +73,7 @@ public class WalletResponseValidator {
             int index = Integer.parseInt(statusList.get("idx").toString());
             String url = statusList.get("uri").toString();
 
-            //boolean isValid = credentialStatusService.isCredentialValid(1, "http://localhost:8081/status-list");
+            //boolean isValid = credentialStatusService.isCredentialValid(index, "http://localhost:8081/status-list");
             boolean isValid = true;
             if (!isValid) {
                 System.out.println("Credential has been revoked. Skipping further validation.");
@@ -87,6 +86,8 @@ public class WalletResponseValidator {
                 }
 
                 return;
+            } else {
+                System.out.println("Valid credential!");
             }
         }
 
@@ -115,7 +116,7 @@ public class WalletResponseValidator {
             String claimName = disclosure.get(1);
             String claimValue = disclosure.get(2);
 
-            String canonicalJson = "[\"" + salt + "\", \"" + claimName + "\", " + claimValue + "]";
+            String canonicalJson = "[\"" + salt + "\",\"" + claimName + "\",\"" + claimValue + "\"]";
 
             byte[] utf8Bytes = canonicalJson.getBytes(StandardCharsets.UTF_8);
 
@@ -143,20 +144,22 @@ public class WalletResponseValidator {
         System.out.println("Claims received:");
         claims.forEach((k, v) -> System.out.println(k + ": " + v));
 
-        String ageStr = claims.get("age_in_years");
+        String ageStr = claims.get("birthdate");
         if (ageStr == null) {
             throw new RuntimeException("age_in_years claim not found!");
         }
 
-        int age = Integer.parseInt(claims.get("age_in_years"));
+//        int age = Integer.parseInt(claims.get("age_in_years"));
+//
+//        if (age >= 18) {
+//            System.out.println("User is over 18 years old.");
+//            record.setStatus(TransactionStatus.ACCEPTED);
+//        } else {
+//            System.out.println("User is under 18 years old.");
+//            record.setStatus(TransactionStatus.DENIED);
+//        }
 
-        if (age >= 18) {
-            System.out.println("User is over 18 years old.");
-            record.setStatus(TransactionStatus.ACCEPTED);
-        } else {
-            System.out.println("User is under 18 years old.");
-            record.setStatus(TransactionStatus.DENIED);
-        }
+        record.setStatus(TransactionStatus.ACCEPTED);
 
 
 

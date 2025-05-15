@@ -9,6 +9,7 @@ import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jwt.SignedJWT;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -40,7 +41,9 @@ public class CredentialStatusService {
             throw new UnsupportedOperationException("Only bits=1 is supported");
         }
 
-        byte[] decoded = Base64.getUrlDecoder().decode(list.getLst());
+        byte[] compressed = Base64.getUrlDecoder().decode(list.getLst());
+        byte[] decoded = decompress(compressed);
+
         int byteIndex = index / 8;
         int bitOffset = index % 8;
 
@@ -53,6 +56,23 @@ public class CredentialStatusService {
 
         return bit == 0;
     }
+
+    private byte[] decompress(byte[] compressed) throws Exception {
+        java.util.zip.Inflater inflater = new java.util.zip.Inflater();
+        inflater.setInput(compressed);
+
+        byte[] buffer = new byte[200000];
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+        while (!inflater.finished()) {
+            int count = inflater.inflate(buffer);
+            outputStream.write(buffer, 0, count);
+        }
+
+        inflater.end();
+        return outputStream.toByteArray();
+    }
+
 
     private StatusList fetchAndCacheStatusList(String statusListUrl) {
         try {
