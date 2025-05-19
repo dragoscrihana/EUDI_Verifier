@@ -35,14 +35,12 @@ public class VerifierController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/{accountType}")
+    @PostMapping("/{attribute}")
     public ResponseEntity<InitTransactionResponse> initPresentationByName(
-            @PathVariable String accountType,
+            @PathVariable String attribute,
             @RequestBody InitTransactionTO input
     ) {
-        String jsonName = featureFlagService.resolvePresentationJson(accountType);
-
-        PresentationDefinitionTO definition = definitionService.loadDefinition(jsonName);
+        PresentationDefinitionTO definition = definitionService.loadDefinition(attribute);
         input.setPresentationDefinition(definition);
 
         InitTransactionResponse response = verifierService.handleInitTransaction(input);

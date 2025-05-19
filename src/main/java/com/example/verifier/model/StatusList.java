@@ -2,8 +2,6 @@ package com.example.verifier.model;
 
 import jakarta.persistence.*;
 
-import java.time.LocalDateTime;
-
 @Entity
 @Table(name = "status_lists")
 public class StatusList {
@@ -17,8 +15,9 @@ public class StatusList {
     @Column(nullable = false)
     private int bits;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
-    private String lst;
+    @Lob
+    @Column(nullable = false)
+    private byte[] decoded;
 
     @Column(name = "expires_at", nullable = false)
     private long expiresAt;
@@ -50,12 +49,12 @@ public class StatusList {
         this.bits = bits;
     }
 
-    public String getLst() {
-        return lst;
+    public byte[] getDecoded() {
+        return decoded;
     }
 
-    public void setLst(String lst) {
-        this.lst = lst;
+    public void setDecoded(byte[] decoded) {
+        this.decoded = decoded;
     }
 
     public long getExpiresAt() {

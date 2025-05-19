@@ -73,7 +73,7 @@ public class WalletResponseValidator {
             int index = Integer.parseInt(statusList.get("idx").toString());
             String url = statusList.get("uri").toString();
 
-            //boolean isValid = credentialStatusService.isCredentialValid(index, "http://localhost:8081/status-list");
+            //boolean isValid = credentialStatusService.isCredentialValid(6, url);
             boolean isValid = true;
             if (!isValid) {
                 System.out.println("Credential has been revoked. Skipping further validation.");
@@ -145,10 +145,10 @@ public class WalletResponseValidator {
         claims.forEach((k, v) -> System.out.println(k + ": " + v));
 
         String ageStr = claims.get("birthdate");
-        if (ageStr == null) {
-            throw new RuntimeException("age_in_years claim not found!");
-        }
-
+//        if (ageStr == null) {
+//            throw new RuntimeException("age_in_years claim not found!");
+//        }
+//
 //        int age = Integer.parseInt(claims.get("age_in_years"));
 //
 //        if (age >= 18) {

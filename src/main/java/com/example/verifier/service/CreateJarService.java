@@ -40,7 +40,7 @@ public class CreateJarService {
                 .issueTime(Date.from(now))
                 .claim("scope", "")
                 .claim("response_type", "vp_token")
-                .claim("response_uri", "https://glowing-gradually-midge.ngrok-free.app/wallet/direct_post/" + presentation.getRequestId())
+                .claim("response_uri", "https://free-barnacle-exciting.ngrok-free.app/wallet/direct_post/" + presentation.getRequestId())
                 .claim("presentation_definition", presentation.getPresentationDefinition())
                 .claim("state", presentation.getRequestId())
                 .claim("nonce", UUID.randomUUID().toString())

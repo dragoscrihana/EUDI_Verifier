@@ -9,6 +9,7 @@ import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jwt.SignedJWT;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -41,8 +42,7 @@ public class CredentialStatusService {
             throw new UnsupportedOperationException("Only bits=1 is supported");
         }
 
-        byte[] compressed = Base64.getUrlDecoder().decode(list.getLst());
-        byte[] decoded = decompress(compressed);
+        byte[] decoded = list.getDecoded();
 
         int byteIndex = index / 8;
         int bitOffset = index % 8;
@@ -52,7 +52,7 @@ public class CredentialStatusService {
         }
 
         int byteVal = decoded[byteIndex] & 0xFF;
-        int bit = (byteVal >> (7 - bitOffset)) & 1;
+        int bit = (byteVal >> bitOffset) & 1;
 
         return bit == 0;
     }
@@ -92,7 +92,7 @@ public class CredentialStatusService {
             byte[] certBytes = Base64.getDecoder().decode(certB64);
             CertificateFactory factory = CertificateFactory.getInstance("X.509");
             X509Certificate certificate = (X509Certificate) factory.generateCertificate(
-                    new java.io.ByteArrayInputStream(certBytes)
+                    new ByteArrayInputStream(certBytes)
             );
             PublicKey publicKey = certificate.getPublicKey();
 
@@ -109,11 +109,14 @@ public class CredentialStatusService {
             long expiresAt = payload.get("exp").asLong();
             long fetchedAt = Instant.now().getEpochSecond();
 
+            byte[] compressed = Base64.getDecoder().decode(lst);
+            byte[] decoded = decompress(compressed);
+
             StatusList list = repository.findByUrl(statusListUrl)
                     .orElse(new StatusList());
             list.setUrl(statusListUrl);
             list.setBits(bits);
-            list.setLst(lst);
+            list.setDecoded(decoded);
             list.setExpiresAt(expiresAt);
             list.setFetchedAt(fetchedAt);
 
