@@ -24,7 +24,7 @@ public class VerifierService {
     private final TransactionRepository transactionRepository;
     private final EvidenceService evidenceService;
 
-    private static final String BASE_REQUEST_URI = "https://free-barnacle-exciting.ngrok-free.app/wallet/request.jwt/";
+    private static final String BASE_REQUEST_URI = "https://backend.credcheck.site/wallet/request.jwt/";
 
     public VerifierService(Clock clock, PresentationStore presentationStore, TransactionRepository transactionRepository, EvidenceService evidenceService) {
         this.clock = clock;

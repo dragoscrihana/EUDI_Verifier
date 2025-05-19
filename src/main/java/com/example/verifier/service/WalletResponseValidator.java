@@ -24,10 +24,12 @@ public class WalletResponseValidator {
 
     private final TransactionRepository transactionRepository;
     private final CredentialStatusService credentialStatusService;
+    private final RevocationService revocationService;
 
-    public WalletResponseValidator(TransactionRepository transactionRepository, CredentialStatusService credentialStatusService) {
+    public WalletResponseValidator(TransactionRepository transactionRepository, CredentialStatusService credentialStatusService, RevocationService revocationService) {
         this.transactionRepository = transactionRepository;
         this.credentialStatusService = credentialStatusService;
+        this.revocationService = revocationService;
     }
 
     public void validate(String vpTokenWithDisclosures, String presentationDefinitionId) throws Exception {
@@ -67,6 +69,32 @@ public class WalletResponseValidator {
         Map<String, Object> payload = signedJWT.getJWTClaimsSet().getClaims();
 
         Map<String, Object> statusObject = (Map<String, Object>) payload.get("status");
+
+        // IPFS revocation check
+        if (statusObject != null && statusObject.containsKey("ipfs_list")) {
+            Map<String, Object> ipfsList = (Map<String, Object>) statusObject.get("ipfs_list");
+
+            int ipfsIdx = Integer.parseInt(ipfsList.get("id").toString());
+            String ipfsUri = ipfsList.get("uri").toString();
+
+            //boolean revoked = revocationService.isRevokedViaIpfs(ipfsUri, ipfsIdx);
+            boolean revoked = false;
+            if (revoked) {
+                System.out.println("Credential revoked via IPFS.");
+
+                var maybeRecord = transactionRepository.findByPresentationDefinitionId(presentationDefinitionId);
+                if (maybeRecord.isPresent()) {
+                    var record = maybeRecord.get();
+                    record.setStatus(TransactionStatus.DENIED);
+                    transactionRepository.save(record);
+                }
+
+                return;
+            } else {
+                System.out.println("Credential not revoked via IPFS.");
+            }
+        }
+
         if (statusObject != null && statusObject.containsKey("status_list")) {
             Map<String, Object> statusList = (Map<String, Object>) statusObject.get("status_list");
 
