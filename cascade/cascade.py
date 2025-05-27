@@ -1,10 +1,12 @@
 import math
 import hashlib
+import time
 from pickle import dumps
 from secrets import randbits
 from rbloom import Bloom
 import struct
 import secrets
+from datetime import datetime, timedelta
 
 
 class Cascade:
@@ -60,9 +62,7 @@ class Cascade:
             false_positive_rate = p0 if level == 0 else p
 
             # Create a new filter
-
             filter = Bloom(expected_items=len(Win), false_positive_rate=false_positive_rate, hash_func=self._hash_func)
-
 
             W_salted = set()
             for id in Win:
@@ -126,9 +126,20 @@ class Cascade:
         Serialize the cascade filter into a binary format.
         
         Returns:
-            bytes: Serialized cascade data
+            bytes: Serialized cascade data with timestamp as the first 4 bytes (today at 00:00)
         """
         data = []
+        
+        now = datetime.now()
+
+        # Calculate midnight (next day)
+        midnight = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Convert to timestamp (seconds since epoch)
+        midnight_timestamp = int(midnight.timestamp())
+
+        # Add today's midnight timestamp
+        data.append(struct.pack('>I', midnight_timestamp))
         
         # Add salt
         salt_bytes = bytes.fromhex(self.salt)
@@ -153,12 +164,16 @@ class Cascade:
         # Combine all parts
         return b''.join(data)
 
-    def deserialize_cascade(self, data):
+    def deserialize_cascade(self, data, max_age_days=1):
         """
         Deserialize binary data into a cascade filter.
         
         Args:
             data: Binary data or hex string representation
+            max_age_days: Maximum age in days for the data to be considered valid
+            
+        Returns:
+            int: Timestamp if successful, -1 if expired
         """
         # Handle hex string input
         if isinstance(data, str):
@@ -169,8 +184,15 @@ class Cascade:
             except ValueError as e:
                 raise ValueError(f"Invalid hex string: {e}")
         
-        # Extract salt (first 32 bytes)
+        # Extract timestamp (first 4 bytes)
         offset = 0
+        timestamp = struct.unpack_from('>I', data, offset)[0]
+
+        
+        # Continue with deserialization
+        offset += 4
+        
+        # Extract salt (next 32 bytes)
         self.salt = data[offset:offset + 32].hex()
         offset += 32
         
@@ -194,6 +216,9 @@ class Cascade:
             
             # Store filter
             self.filters.append({'level': i, 'filter': filter})
+        
+        # Return the timestamp that was embedded in the data
+        return timestamp
 
     def _get_seasoned_id(self, id, level):
         """

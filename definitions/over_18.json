@@ -35,7 +35,7 @@
             },
             {
             "path": [
-                "$.over_18"
+                "$.is_over_18"
             ],
             "intent_to_retain": false
             }

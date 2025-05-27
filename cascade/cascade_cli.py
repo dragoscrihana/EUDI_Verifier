@@ -52,16 +52,18 @@ def main():
                 
     elif args.command == 'check':
 
+        print(args.id)
+
         # Load cascade
         with open(args.cascade, 'rb') as f:
             serialized = f.read()
             
         cascade = Cascade()
-        cascade.deserialize_cascade(serialized)
+        exp = cascade.deserialize_cascade(serialized)
         
         # Check ID
         is_revoked = cascade.is_revoked(args.id)
-        result = {"id": args.id, "revoked": is_revoked}
+        result = {"exp" :exp, "id": args.id, "revoked": is_revoked}
         
         # Print result as JSON
         print(json.dumps(result))

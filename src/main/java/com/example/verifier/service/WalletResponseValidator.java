@@ -15,6 +15,8 @@ import java.security.PublicKey;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.interfaces.ECPublicKey;
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.*;
 
 import java.util.Base64;
@@ -70,97 +72,83 @@ public class WalletResponseValidator {
 
         Map<String, Object> statusObject = (Map<String, Object>) payload.get("status");
 
-        // IPFS revocation check
-        if (statusObject != null && statusObject.containsKey("ipfs_list")) {
-            Map<String, Object> ipfsList = (Map<String, Object>) statusObject.get("ipfs_list");
+//        long ipfsStart = System.nanoTime();
+//        // IPFS revocation check
+//        if (statusObject != null && statusObject.containsKey("ipfs_list")) {
+//            Map<String, Object> ipfsList = (Map<String, Object>) statusObject.get("ipfs_list");
+//
+//            int ipfsIdx = Integer.parseInt(ipfsList.get("id").toString());
+//            String ipfsUri = ipfsList.get("uri").toString();
+//
+//            boolean revoked = revocationService.isRevokedViaIpfs(ipfsUri, ipfsIdx);
+//            //boolean revoked = false;
+//            if (revoked) {
+//                System.out.println("Credential revoked via IPFS.");
+//
+//                var maybeRecord = transactionRepository.findByPresentationDefinitionId(presentationDefinitionId);
+//                if (maybeRecord.isPresent()) {
+//                    var record = maybeRecord.get();
+//                    record.setStatus(TransactionStatus.DENIED);
+//                    transactionRepository.save(record);
+//                }
+//
+//                return;
+//            } else {
+//                System.out.println("Credential not revoked via IPFS.");
+//            }
+//        }
 
-            int ipfsIdx = Integer.parseInt(ipfsList.get("id").toString());
-            String ipfsUri = ipfsList.get("uri").toString();
+//        long ipfsEnd = System.nanoTime();
+//        System.out.println("IPFS time: " + (ipfsEnd - ipfsStart) / 1_000_000 + " ms");
+//
+//        long listStart = System.nanoTime();
+//        if (statusObject != null && statusObject.containsKey("status_list")) {
+//            Map<String, Object> statusList = (Map<String, Object>) statusObject.get("status_list");
+//
+//            int index = Integer.parseInt(statusList.get("idx").toString());
+//            String url = statusList.get("uri").toString();
+//
+//            boolean isValid = credentialStatusService.isCredentialValid(index, url);
+//            //boolean isValid = true;
+//            if (!isValid) {
+//                System.out.println("Credential has been revoked. Skipping further validation.");
+//
+//                var maybeRecord = transactionRepository.findByPresentationDefinitionId(presentationDefinitionId);
+//                if (maybeRecord.isPresent()) {
+//                    var record = maybeRecord.get();
+//                    record.setStatus(TransactionStatus.DENIED);
+//                    transactionRepository.save(record);
+//                }
+//
+//                return;
+//            } else {
+//                System.out.println("Valid credential!");
+//            }
+//        }
+//
+//        long listEnd = System.nanoTime();
+//        System.out.println("Status list time: " + (listEnd - listStart) / 1_000_000 + " ms");
 
-            //boolean revoked = revocationService.isRevokedViaIpfs(ipfsUri, ipfsIdx);
-            boolean revoked = false;
-            if (revoked) {
-                System.out.println("Credential revoked via IPFS.");
-
-                var maybeRecord = transactionRepository.findByPresentationDefinitionId(presentationDefinitionId);
-                if (maybeRecord.isPresent()) {
-                    var record = maybeRecord.get();
-                    record.setStatus(TransactionStatus.DENIED);
-                    transactionRepository.save(record);
-                }
-
-                return;
-            } else {
-                System.out.println("Credential not revoked via IPFS.");
-            }
-        }
-
-        if (statusObject != null && statusObject.containsKey("status_list")) {
-            Map<String, Object> statusList = (Map<String, Object>) statusObject.get("status_list");
-
-            int index = Integer.parseInt(statusList.get("idx").toString());
-            String url = statusList.get("uri").toString();
-
-            //boolean isValid = credentialStatusService.isCredentialValid(6, url);
-            boolean isValid = true;
-            if (!isValid) {
-                System.out.println("Credential has been revoked. Skipping further validation.");
-
-                var maybeRecord = transactionRepository.findByPresentationDefinitionId(presentationDefinitionId);
-                if (maybeRecord.isPresent()) {
-                    var record = maybeRecord.get();
-                    record.setStatus(TransactionStatus.DENIED);
-                    transactionRepository.save(record);
-                }
-
-                return;
-            } else {
-                System.out.println("Valid credential!");
-            }
-        }
 
         List<String> sdHashes = (List<String>) payload.get("_sd");
         if (sdHashes == null) {
             throw new RuntimeException("_sd field missing in JWT payload!");
         }
 
-        List<List<String>> parsedDisclosures = new ArrayList<>();
-        for (String disclosureBase64 : disclosures) {
-            String decodedDisclosureJson = new String(Base64.getUrlDecoder().decode(disclosureBase64), StandardCharsets.UTF_8);
-
-            JSONArray disclosureArray = new JSONArray(decodedDisclosureJson);
-
-            List<String> disclosureList = new ArrayList<>();
-            for (int i = 0; i < disclosureArray.length(); i++) {
-                Object element = disclosureArray.get(i);
-                disclosureList.add(element.toString());
-            }
-            parsedDisclosures.add(disclosureList);
+        if (disclosures.size() != 1) {
+            throw new RuntimeException("Expected exactly one disclosure!");
         }
 
-        Map<String, String> claims = new HashMap<>();
-        for (List<String> disclosure : parsedDisclosures) {
-            String salt = disclosure.get(0);
-            String claimName = disclosure.get(1);
-            String claimValue = disclosure.get(2);
+        String disclosureBase64 = disclosures.get(0);
+        String decodedDisclosureJson = new String(Base64.getUrlDecoder().decode(disclosureBase64), StandardCharsets.UTF_8);
+        JSONArray disclosureArray = new JSONArray(decodedDisclosureJson);
 
-            String canonicalJson = "[\"" + salt + "\",\"" + claimName + "\",\"" + claimValue + "\"]";
-
-            byte[] utf8Bytes = canonicalJson.getBytes(StandardCharsets.UTF_8);
-
-            String base64urlDisclosure = Base64.getUrlEncoder().withoutPadding().encodeToString(utf8Bytes);
-
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(base64urlDisclosure.getBytes(StandardCharsets.US_ASCII));
-
-            String base64urlHash = Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
-
-            if (!sdHashes.contains(base64urlHash)) {
-                throw new RuntimeException("Disclosure hash mismatch for claim: " + claimName);
-            }
-
-            claims.put(claimName, claimValue);
+        List<String> disclosure = new ArrayList<>();
+        for (int i = 0; i < disclosureArray.length(); i++) {
+            disclosure.add(disclosureArray.get(i).toString());
         }
+
+        boolean isOver18 = validateDisclosureAndCheckAge(disclosure, sdHashes);
 
         var maybeRecord = transactionRepository.findByPresentationDefinitionId(presentationDefinitionId);
 
@@ -169,28 +157,66 @@ public class WalletResponseValidator {
         }
         var record = maybeRecord.get();
 
-        System.out.println("Claims received:");
-        claims.forEach((k, v) -> System.out.println(k + ": " + v));
-
-        String ageStr = claims.get("birthdate");
-//        if (ageStr == null) {
-//            throw new RuntimeException("age_in_years claim not found!");
-//        }
-//
-//        int age = Integer.parseInt(claims.get("age_in_years"));
-//
-//        if (age >= 18) {
-//            System.out.println("User is over 18 years old.");
-//            record.setStatus(TransactionStatus.ACCEPTED);
-//        } else {
-//            System.out.println("User is under 18 years old.");
-//            record.setStatus(TransactionStatus.DENIED);
-//        }
-
-        record.setStatus(TransactionStatus.ACCEPTED);
-
-
+        if (isOver18) {
+            System.out.println("User is over 18 years old.");
+            record.setStatus(TransactionStatus.ACCEPTED);
+        } else {
+            System.out.println("User is under 18 years old.");
+            record.setStatus(TransactionStatus.DENIED);
+        }
 
         transactionRepository.save(record);
+    }
+
+    private boolean validateDisclosureAndCheckAge(List<String> disclosure, List<String> sdHashes) throws Exception {
+        if (disclosure.size() != 3) {
+            throw new IllegalArgumentException("Disclosure must contain exactly 3 elements");
+        }
+
+        String salt = disclosure.get(0);
+        String claimName = disclosure.get(1);
+        String claimValueRaw = disclosure.get(2);
+
+        String canonicalValue;
+        if ("true".equals(claimValueRaw) || "false".equals(claimValueRaw) || isNumeric(claimValueRaw)) {
+            canonicalValue = claimValueRaw;
+        } else {
+            canonicalValue = "\"" + claimValueRaw + "\"";
+        }
+
+        String canonicalJson = "[\"" + salt + "\",\"" + claimName + "\"," + canonicalValue + "]";
+        byte[] utf8Bytes = canonicalJson.getBytes(StandardCharsets.UTF_8);
+        String base64urlDisclosure = Base64.getUrlEncoder().withoutPadding().encodeToString(utf8Bytes);
+
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] hash = digest.digest(base64urlDisclosure.getBytes(StandardCharsets.US_ASCII));
+        String base64urlHash = Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+
+        if (!sdHashes.contains(base64urlHash)) {
+            throw new RuntimeException("Disclosure hash mismatch for claim: " + claimName);
+        }
+
+        switch (claimName) {
+            case "is_over_18":
+                return Boolean.parseBoolean(claimValueRaw);
+            case "age_in_years":
+                return Integer.parseInt(claimValueRaw) >= 18;
+            case "birthdate":
+                LocalDate birthdate = LocalDate.parse(claimValueRaw);
+                LocalDate today = LocalDate.now();
+                Period age = Period.between(birthdate, today);
+                return age.getYears() >= 18;
+            default:
+                throw new RuntimeException("Unknown claim name: " + claimName);
+        }
+    }
+
+    private boolean isNumeric(String str) {
+        try {
+            Double.parseDouble(str);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 }
