@@ -197,6 +197,8 @@ public class WalletResponseValidator {
         }
 
         switch (claimName) {
+            case "is_student":
+                return Boolean.parseBoolean(claimValueRaw);
             case "is_over_18":
                 return Boolean.parseBoolean(claimValueRaw);
             case "age_in_years":

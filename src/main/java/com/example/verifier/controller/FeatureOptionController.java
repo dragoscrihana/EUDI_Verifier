@@ -21,11 +21,8 @@ public class FeatureOptionController {
 
     @GetMapping("/{accountType}")
     public ResponseEntity<List<String>> getOptions(@PathVariable String accountType) {
-        if (!"restaurant".equalsIgnoreCase(accountType)) {
-            return ResponseEntity.ok(Collections.emptyList());
-        }
 
-        Variant variant = unleash.getVariant("restaurant-attributes");
+        Variant variant = unleash.getVariant(accountType.toLowerCase() + "-attributes");
         System.out.println(variant);
 
         if (variant.getPayload().isPresent()) {
