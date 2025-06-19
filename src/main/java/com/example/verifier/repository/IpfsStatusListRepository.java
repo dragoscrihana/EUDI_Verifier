@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface IpfsStatusListRepository extends JpaRepository<IpfsStatusList, Long> {
-    Optional<IpfsStatusList> findByUrl(String url);
+    Optional<IpfsStatusList> findByIssuerName(String issuerName);
 }

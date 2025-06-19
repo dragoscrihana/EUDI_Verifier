@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import base64
 import sys
 from cascade import Cascade  # Import your Cascade class
 
@@ -30,7 +31,8 @@ def main():
     
     # Check command
     check_parser = subparsers.add_parser('check', help='Check if an ID is revoked')
-    check_parser.add_argument('--cascade', required=True, help='Serialized cascade file')
+    check_parser.add_argument('--cascade', help='Serialized cascade file')
+    check_parser.add_argument('--cascade_data', help='Base64-encoded cascade string')
     check_parser.add_argument('--id', required=True, help='Credential ID to check')
     
     # Parse arguments
@@ -55,8 +57,11 @@ def main():
         print(args.id)
 
         # Load cascade
-        with open(args.cascade, 'rb') as f:
-            serialized = f.read()
+        if hasattr(args, 'cascade_data') and args.cascade_data:
+            serialized = base64.b64decode(args.cascade_data)
+        else:
+            with open(args.cascade, 'rb') as f:
+                serialized = f.read()
             
         cascade = Cascade()
         exp = cascade.deserialize_cascade(serialized)

@@ -2,6 +2,7 @@ package com.example.verifier.service;
 
 import com.example.verifier.model.TransactionStatus;
 import com.example.verifier.repository.TransactionRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
@@ -26,12 +27,14 @@ public class WalletResponseValidator {
 
     private final TransactionRepository transactionRepository;
     private final CredentialStatusService credentialStatusService;
-    private final RevocationService revocationService;
+    private final IpfsService ipfsService;
+    private final BlockchainRevocationChecker blockchainRevocationChecker;
 
-    public WalletResponseValidator(TransactionRepository transactionRepository, CredentialStatusService credentialStatusService, RevocationService revocationService) {
+    public WalletResponseValidator(TransactionRepository transactionRepository, CredentialStatusService credentialStatusService, IpfsService ipfsService, BlockchainRevocationChecker blockchainRevocationChecker) {
         this.transactionRepository = transactionRepository;
         this.credentialStatusService = credentialStatusService;
-        this.revocationService = revocationService;
+        this.ipfsService = ipfsService;
+        this.blockchainRevocationChecker = blockchainRevocationChecker;
     }
 
     public void validate(String vpTokenWithDisclosures, String presentationDefinitionId) throws Exception {
@@ -71,32 +74,47 @@ public class WalletResponseValidator {
         Map<String, Object> payload = signedJWT.getJWTClaimsSet().getClaims();
 
         Map<String, Object> statusObject = (Map<String, Object>) payload.get("status");
+        String issuer = (String) payload.get("iss");
 
-//        long ipfsStart = System.nanoTime();
-//        // IPFS revocation check
-//        if (statusObject != null && statusObject.containsKey("ipfs_list")) {
-//            Map<String, Object> ipfsList = (Map<String, Object>) statusObject.get("ipfs_list");
-//
-//            int ipfsIdx = Integer.parseInt(ipfsList.get("id").toString());
-//            String ipfsUri = ipfsList.get("uri").toString();
-//
-//            boolean revoked = revocationService.isRevokedViaIpfs(ipfsUri, ipfsIdx);
-//            //boolean revoked = false;
-//            if (revoked) {
-//                System.out.println("Credential revoked via IPFS.");
-//
-//                var maybeRecord = transactionRepository.findByPresentationDefinitionId(presentationDefinitionId);
-//                if (maybeRecord.isPresent()) {
-//                    var record = maybeRecord.get();
-//                    record.setStatus(TransactionStatus.DENIED);
-//                    transactionRepository.save(record);
-//                }
-//
-//                return;
-//            } else {
-//                System.out.println("Credential not revoked via IPFS.");
-//            }
-//        }
+        //long ipfsStart = System.nanoTime();
+        // Blockchain revocation check
+        if (statusObject != null && statusObject.containsKey("blockchain_list")) {
+            Map<String, Object> blockchainList = (Map<String, Object>) statusObject.get("blockchain_list");
+
+            ObjectMapper mapper = new ObjectMapper();
+
+            String contractAddress = blockchainList.get("contract_address").toString();
+
+            String abiJson = mapper.writeValueAsString(blockchainList.get("abi"));
+            String abiBase64 = Base64.getEncoder().encodeToString(abiJson.getBytes(StandardCharsets.UTF_8));
+
+            String issuerAddress = blockchainList.get("issuer_address").toString();
+            int index = Integer.parseInt(blockchainList.get("idx").toString());
+
+            boolean revoked = blockchainRevocationChecker.checkRevocationViaBlockchain(
+                    contractAddress,
+                    abiBase64,
+                    issuerAddress,
+                    index,
+                    issuer
+            );
+
+            if (revoked) {
+                System.out.println("Credential revoked via blockchain+IPFS.");
+
+                var maybeRecord = transactionRepository.findByPresentationDefinitionId(presentationDefinitionId);
+                if (maybeRecord.isPresent()) {
+                    var record = maybeRecord.get();
+                    record.setStatus(TransactionStatus.DENIED);
+                    transactionRepository.save(record);
+                }
+
+                return;
+            } else {
+                System.out.println("Credential not revoked via blockchain+IPFS.");
+            }
+        }
+
 
 //        long ipfsEnd = System.nanoTime();
 //        System.out.println("IPFS time: " + (ipfsEnd - ipfsStart) / 1_000_000 + " ms");

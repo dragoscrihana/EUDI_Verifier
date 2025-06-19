@@ -9,14 +9,14 @@ public class IpfsStatusList {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String url;
+    @Column(name = "issuer_name", nullable = false, unique = true)
+    private String issuerName;
 
     @Column(nullable = false)
     private long expiresAt;
 
-    @Column(nullable = false)
-    private String binFilename;
+    @Column(name = "cascade_base64", columnDefinition = "TEXT", nullable = false)
+    private String cascadeBase64;
 
     public Long getId() {
         return id;
@@ -26,12 +26,12 @@ public class IpfsStatusList {
         this.id = id;
     }
 
-    public String getUrl() {
-        return url;
+    public String getIssuerName() {
+        return issuerName;
     }
 
-    public void setUrl(String url) {
-        this.url = url;
+    public void setIssuerName(String issuerName) {
+        this.issuerName = issuerName;
     }
 
     public long getExpiresAt() {
@@ -42,11 +42,11 @@ public class IpfsStatusList {
         this.expiresAt = expiresAt;
     }
 
-    public String getBinFilename() {
-        return binFilename;
+    public String getCascadeBase64() {
+        return cascadeBase64;
     }
 
-    public void setBinFilename(String binFilename) {
-        this.binFilename = binFilename;
+    public void setCascadeBase64(String cascadeBase64) {
+        this.cascadeBase64 = cascadeBase64;
     }
 }
