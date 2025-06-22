@@ -44,38 +44,89 @@ public class IpfsService {
                 statusList = fetchAndCacheStatusList(uri, sanitizedIssuer);
             }
 
-            ProcessBuilder pb = new ProcessBuilder("python", "cascade/cascade_cli.py", "check",
-                    "--cascade_data", statusList.getCascadeBase64(),
-                    "--id", String.valueOf(idx));
-
-            pb.redirectErrorStream(true);
-            Process process = pb.start();
-
-            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            reader.readLine();
-            String jsonLine = reader.readLine();
-
-            process.waitFor();
-
-            if (jsonLine == null) {
-                throw new RuntimeException("No JSON response from cascade_cli.py");
-            }
-
-            JsonNode result = mapper.readTree(jsonLine);
-
-            if (result.has("exp")) {
-                long exp = result.get("exp").asLong();
-                if (exp > statusList.getExpiresAt()) {
-                    statusList.setExpiresAt(exp);
-                    repository.save(statusList);
-                }
-            }
-
-            return result.has("revoked") && result.get("revoked").asBoolean();
+            return runCascadeCheck(statusList.getCascadeBase64(), idx);
 
         } catch (Exception e) {
             throw new RuntimeException("IPFS revocation check failed", e);
         }
+    }
+
+    public boolean isRevokedViaBlob(String pointerHash, int idx, String issuerName) {
+        try {
+            String sanitizedIssuer = issuerName
+                    .replaceFirst("^https?://", "")
+                    .replaceAll("[/.]", "_");
+
+            IpfsStatusList statusList = repository.findByIssuerName(sanitizedIssuer).orElse(null);
+            long now = System.currentTimeMillis() / 1000;
+
+            if (statusList == null || statusList.getExpiresAt() <= now) {
+                ProcessBuilder pb = new ProcessBuilder("python", "cascade/cascade_cli.py", "check",
+                        "--pointer_hash", pointerHash,
+                        "--id", String.valueOf(idx));
+
+                pb.redirectErrorStream(true);
+                Process process = pb.start();
+
+                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                reader.readLine();  // Optional first line
+                String jsonLine = reader.readLine();
+
+                process.waitFor();
+
+                if (jsonLine == null) {
+                    throw new RuntimeException("No JSON response from cascade_cli.py (blob)");
+                }
+
+                JsonNode result = mapper.readTree(jsonLine);
+
+                if (!result.has("b64_blob") || !result.has("exp")) {
+                    throw new RuntimeException("Missing b64_blob or exp in CLI output");
+                }
+
+                String cascadeBase64 = result.get("b64_blob").asText();
+                long exp = result.get("exp").asLong();
+
+                if (statusList == null) {
+                    statusList = new IpfsStatusList();
+                    statusList.setIssuerName(sanitizedIssuer);
+                }
+
+                statusList.setCascadeBase64(cascadeBase64);
+                statusList.setExpiresAt(exp);
+                repository.save(statusList);
+
+                return result.get("revoked").asBoolean();
+            }
+
+            return runCascadeCheck(statusList.getCascadeBase64(), idx);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Blob revocation check failed", e);
+        }
+    }
+
+
+    private boolean runCascadeCheck(String cascadeBase64, int idx) throws IOException, InterruptedException {
+        ProcessBuilder pb = new ProcessBuilder("python", "cascade/cascade_cli.py", "check",
+                "--cascade_data", cascadeBase64,
+                "--id", String.valueOf(idx));
+
+        pb.redirectErrorStream(true);
+        Process process = pb.start();
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+        reader.readLine(); // Skip optional line
+        String jsonLine = reader.readLine();
+
+        process.waitFor();
+
+        if (jsonLine == null) {
+            throw new RuntimeException("No JSON response from cascade_cli.py");
+        }
+
+        JsonNode result = mapper.readTree(jsonLine);
+        return result.has("revoked") && result.get("revoked").asBoolean();
     }
 
     private IpfsStatusList fetchAndCacheStatusList(String uri, String sanitizedIssuer) {
