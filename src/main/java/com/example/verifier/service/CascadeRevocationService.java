@@ -1,6 +1,7 @@
 package com.example.verifier.service;
 
 import com.example.verifier.model.IpfsStatusList;
+import com.example.verifier.model.RevocationResult;
 import com.example.verifier.repository.IpfsStatusListRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -20,12 +21,12 @@ import java.util.Base64;
 import java.util.List;
 
 @Service
-public class IpfsService {
+public class CascadeRevocationService {
 
     private final ObjectMapper mapper = new ObjectMapper();
     private final IpfsStatusListRepository repository;
 
-    public IpfsService(IpfsStatusListRepository repository) {
+    public CascadeRevocationService(IpfsStatusListRepository repository) {
         this.repository = repository;
     }
 
@@ -45,13 +46,13 @@ public class IpfsService {
             }
 
             return runCascadeCheck(statusList.getCascadeBase64(), idx);
-
         } catch (Exception e) {
-            throw new RuntimeException("IPFS revocation check failed", e);
+            System.err.println("IPFS revocation check failed: " + e.getMessage());
+            return true;
         }
     }
 
-    public boolean isRevokedViaBlob(String pointerHash, int idx, String issuerName) {
+    public RevocationResult isRevokedViaBlob(String pointerHash, int idx, String issuerName) {
         try {
             String sanitizedIssuer = issuerName
                     .replaceFirst("^https?://", "")
@@ -60,7 +61,10 @@ public class IpfsService {
             IpfsStatusList statusList = repository.findByIssuerName(sanitizedIssuer).orElse(null);
             long now = System.currentTimeMillis() / 1000;
 
-            if (statusList == null || statusList.getExpiresAt() <= now) {
+            boolean fallbackNeeded = (statusList == null || statusList.getExpiresAt() <= now);
+
+            if (fallbackNeeded) {
+
                 ProcessBuilder pb = new ProcessBuilder("python", "cascade/cascade_cli.py", "check",
                         "--pointer_hash", pointerHash,
                         "--id", String.valueOf(idx));
@@ -69,19 +73,20 @@ public class IpfsService {
                 Process process = pb.start();
 
                 BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                reader.readLine();  // Optional first line
                 String jsonLine = reader.readLine();
 
                 process.waitFor();
 
                 if (jsonLine == null) {
-                    throw new RuntimeException("No JSON response from cascade_cli.py (blob)");
+                    System.err.println("No JSON response from cascade_cli.py (blob)");
+                    return new RevocationResult(true, true);
                 }
 
                 JsonNode result = mapper.readTree(jsonLine);
 
                 if (!result.has("b64_blob") || !result.has("exp")) {
-                    throw new RuntimeException("Missing b64_blob or exp in CLI output");
+                    System.err.println("Missing b64_blob or exp in CLI output");
+                    return new RevocationResult(true, true);
                 }
 
                 String cascadeBase64 = result.get("b64_blob").asText();
@@ -96,37 +101,43 @@ public class IpfsService {
                 statusList.setExpiresAt(exp);
                 repository.save(statusList);
 
-                return result.get("revoked").asBoolean();
+                boolean revoked = result.has("revoked") && result.get("revoked").asBoolean();
+                return new RevocationResult(revoked, false);
             }
 
-            return runCascadeCheck(statusList.getCascadeBase64(), idx);
+            boolean revoked = runCascadeCheck(statusList.getCascadeBase64(), idx);
+            return new RevocationResult(revoked, false);
 
         } catch (Exception e) {
-            throw new RuntimeException("Blob revocation check failed", e);
+            System.err.println("Blob revocation check failed: " + e.getMessage());
+            return new RevocationResult(true, true);
         }
     }
 
+    private boolean runCascadeCheck(String cascadeBase64, int idx) {
+        try {
+            ProcessBuilder pb = new ProcessBuilder("python", "cascade/cascade_cli.py", "check",
+                    "--cascade_data", cascadeBase64,
+                    "--id", String.valueOf(idx));
 
-    private boolean runCascadeCheck(String cascadeBase64, int idx) throws IOException, InterruptedException {
-        ProcessBuilder pb = new ProcessBuilder("python", "cascade/cascade_cli.py", "check",
-                "--cascade_data", cascadeBase64,
-                "--id", String.valueOf(idx));
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
 
-        pb.redirectErrorStream(true);
-        Process process = pb.start();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String jsonLine = reader.readLine();
+            process.waitFor();
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-        reader.readLine(); // Skip optional line
-        String jsonLine = reader.readLine();
+            if (jsonLine == null) {
+                System.err.println("No JSON response from cascade_cli.py (cascade_data)");
+                return true;
+            }
 
-        process.waitFor();
-
-        if (jsonLine == null) {
-            throw new RuntimeException("No JSON response from cascade_cli.py");
+            JsonNode result = mapper.readTree(jsonLine);
+            return result.has("revoked") && result.get("revoked").asBoolean();
+        } catch (Exception e) {
+            System.err.println("Cascade check execution failed: " + e.getMessage());
+            return true;
         }
-
-        JsonNode result = mapper.readTree(jsonLine);
-        return result.has("revoked") && result.get("revoked").asBoolean();
     }
 
     private IpfsStatusList fetchAndCacheStatusList(String uri, String sanitizedIssuer) {
@@ -161,9 +172,9 @@ public class IpfsService {
             statusList.setExpiresAt(exp);
 
             return repository.save(statusList);
-
         } catch (Exception e) {
-            throw new RuntimeException("Failed to fetch or verify JWT from IPFS", e);
+            System.err.println("Failed to fetch or verify JWT: " + e.getMessage());
+            return null;
         }
     }
 

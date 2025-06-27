@@ -3,76 +3,85 @@ import argparse
 import json
 import base64
 import sys
-from cascade import Cascade  # Import your Cascade class
+import requests
+import contextlib
+import io
+from bloom_cascade import Cascade  # or use your own Cascade class
 
-R = set() # Valid creds
-S = set() # Revoked creds
+def load_cascade_from_ipfs(cascade_data_b64: str):
+    serialized = base64.b64decode(cascade_data_b64)
+    csd = Cascade()
+    exp = csd.deserialize_cascade(serialized)
+    return csd, exp
 
-def read_state_list(REVOKED_LIST_FILENAME):
+def load_cascade_from_blob(tx_hash: str):
+    tx_url = f"https://api.holesky.blobscan.com/transactions/0x{tx_hash}"
+    response = requests.get(tx_url)
 
-    with open(REVOKED_LIST_FILENAME) as f:
-        id_status_list = [line.strip() for line in f if line.strip()]
+    if response.status_code != 200:
+        raise Exception(f"Transaction not found: HTTP {response.status_code} - {response.text}")
 
-    for item in id_status_list:
-        hex_hash, status = item.split(':')
-        if status == '1':
-            R.add(hex_hash)
-        else:
-            S.add(hex_hash)
+    tx_data = response.json()
+    if not tx_data.get("blobs"):
+        raise Exception("No blob versioned hashes found in transaction")
+
+    blob_hash = tx_data['blobs'][0]['versionedHash']
+    blobs_url = f"https://api.holesky.blobscan.com/blobs/{blob_hash}/data"
+    blobs_response = requests.get(blobs_url)
+
+    if blobs_response.status_code != 200:
+        raise Exception(f"Could not retrieve blob: HTTP {blobs_response.status_code} - {blobs_response.text}")
+
+    blobs_data = blobs_response.json()
+    blobs_data_bytes = bytes.fromhex(blobs_data[2:])
+
+    csd = Cascade()
+    exp = csd.deserialize_cascade_blob(blobs_data_bytes)
+
+    bytes1 = csd.serialize_cascade()
+
+    b64_blob = base64.b64encode(bytes1).decode("utf-8")
+
+    return csd, exp, b64_blob
 
 def main():
     parser = argparse.ArgumentParser(description='Cascade CRL CLI')
-    subparsers = parser.add_subparsers(dest='command', help='Command to execute')
-    
-    # Build command
-    build_parser = subparsers.add_parser('build', help='Build a Cascade CRL')
-    build_parser.add_argument('--status_list', required=True, help='File containg the status list')
-    build_parser.add_argument('--output', required=True, help='Output file for serialized cascade')
-    
-    # Check command
-    check_parser = subparsers.add_parser('check', help='Check if an ID is revoked')
-    check_parser.add_argument('--cascade', help='Serialized cascade file')
-    check_parser.add_argument('--cascade_data', help='Base64-encoded cascade string')
-    check_parser.add_argument('--id', required=True, help='Credential ID to check')
-    
-    # Parse arguments
+    parser.add_argument('command', choices=['check'], help='Only supported command')
+    parser.add_argument('--cascade_data', help='Base64-encoded cascade string (IPFS mode)')
+    parser.add_argument('--pointer_hash', help='Transaction hash to lookup blob (Blob mode)')
+    parser.add_argument('--id', required=True, help='Credential ID to check')
+
     args = parser.parse_args()
-    
-    # Execute command
-    if args.command == 'build':
 
-        read_state_list(args.status_list)
-        
-        # Build cascade
-        cascade = Cascade()
-        cascade.build_cascade(R, S)
-        
-        # Serialize and save
-        serialized = cascade.serialize_cascade()
-        with open(args.output, 'wb') as f:
-            f.write(serialized)
-                
-    elif args.command == 'check':
+    if args.command == 'check':
+        try:
+            if args.cascade_data:
+                cascade, exp = load_cascade_from_ipfs(args.cascade_data)
+                result = {
+                    "exp": exp,
+                    "id": args.id,
+                    "revoked": cascade.is_revoked(args.id)
+                }
 
-        print(args.id)
+            elif args.pointer_hash:
+                cascade, exp, blob_b64 = load_cascade_from_blob(args.pointer_hash)
+                result = {
+                    "exp": exp,
+                    "id": args.id,
+                    "revoked": cascade.is_revoked(args.id),
+                    "b64_blob": blob_b64
+                }
 
-        # Load cascade
-        if hasattr(args, 'cascade_data') and args.cascade_data:
-            serialized = base64.b64decode(args.cascade_data)
-        else:
-            with open(args.cascade, 'rb') as f:
-                serialized = f.read()
-            
-        cascade = Cascade()
-        exp = cascade.deserialize_cascade(serialized)
-        
-        # Check ID
-        is_revoked = cascade.is_revoked(args.id)
-        result = {"exp" :exp, "id": args.id, "revoked": is_revoked}
-        
-        # Print result as JSON
-        print(json.dumps(result))
-        return 0 if not is_revoked else 1
+            else:
+                print("Error: Provide --cascade_data or --pointer_hash")
+                sys.exit(2)
+
+            print(json.dumps(result))
+            sys.exit(0 if not result["revoked"] else 1)
+
+        except Exception as e:
+            print(json.dumps({"error": str(e)}))
+            sys.exit(3)
 
 if __name__ == "__main__":
     sys.exit(main())

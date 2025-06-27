@@ -26,14 +26,14 @@ import java.util.Base64;
 public class WalletResponseValidator {
 
     private final TransactionRepository transactionRepository;
-    private final CredentialStatusService credentialStatusService;
-    private final IpfsService ipfsService;
+    private final StatusListService statusListService;
+    private final CascadeRevocationService cascadeRevocationService;
     private final BlockchainRevocationChecker blockchainRevocationChecker;
 
-    public WalletResponseValidator(TransactionRepository transactionRepository, CredentialStatusService credentialStatusService, IpfsService ipfsService, BlockchainRevocationChecker blockchainRevocationChecker) {
+    public WalletResponseValidator(TransactionRepository transactionRepository, StatusListService statusListService, CascadeRevocationService cascadeRevocationService, BlockchainRevocationChecker blockchainRevocationChecker) {
         this.transactionRepository = transactionRepository;
-        this.credentialStatusService = credentialStatusService;
-        this.ipfsService = ipfsService;
+        this.statusListService = statusListService;
+        this.cascadeRevocationService = cascadeRevocationService;
         this.blockchainRevocationChecker = blockchainRevocationChecker;
     }
 
@@ -126,7 +126,7 @@ public class WalletResponseValidator {
 //            int index = Integer.parseInt(statusList.get("idx").toString());
 //            String url = statusList.get("uri").toString();
 //
-//            boolean isValid = credentialStatusService.isCredentialValid(index, url);
+//            boolean isValid = statusListService.isCredentialValid(index, url);
 //            //boolean isValid = true;
 //            if (!isValid) {
 //                System.out.println("Credential has been revoked. Skipping further validation.");

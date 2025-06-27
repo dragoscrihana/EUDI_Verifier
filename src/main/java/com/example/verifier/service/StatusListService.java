@@ -7,9 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jwt.SignedJWT;
-import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
@@ -22,15 +20,14 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.Base64;
-import java.util.Random;
 
 @Service
-public class CredentialStatusService {
+public class StatusListService {
 
     private final ObjectMapper mapper = new ObjectMapper();
     private final StatusListRepository repository;
 
-    public CredentialStatusService(StatusListRepository repository) {
+    public StatusListService(StatusListRepository repository) {
         this.repository = repository;
     }
 
