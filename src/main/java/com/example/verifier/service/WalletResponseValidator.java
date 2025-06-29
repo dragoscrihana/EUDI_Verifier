@@ -76,8 +76,6 @@ public class WalletResponseValidator {
         Map<String, Object> statusObject = (Map<String, Object>) payload.get("status");
         String issuer = (String) payload.get("iss");
 
-        //long ipfsStart = System.nanoTime();
-        // Blockchain revocation check
         if (statusObject != null && statusObject.containsKey("blockchain_list")) {
             Map<String, Object> blockchainList = (Map<String, Object>) statusObject.get("blockchain_list");
 
@@ -116,37 +114,28 @@ public class WalletResponseValidator {
         }
 
 
-//        long ipfsEnd = System.nanoTime();
-//        System.out.println("IPFS time: " + (ipfsEnd - ipfsStart) / 1_000_000 + " ms");
-//
-//        long listStart = System.nanoTime();
-//        if (statusObject != null && statusObject.containsKey("status_list")) {
-//            Map<String, Object> statusList = (Map<String, Object>) statusObject.get("status_list");
-//
-//            int index = Integer.parseInt(statusList.get("idx").toString());
-//            String url = statusList.get("uri").toString();
-//
-//            boolean isValid = statusListService.isCredentialValid(index, url);
-//            //boolean isValid = true;
-//            if (!isValid) {
-//                System.out.println("Credential has been revoked. Skipping further validation.");
-//
-//                var maybeRecord = transactionRepository.findByPresentationDefinitionId(presentationDefinitionId);
-//                if (maybeRecord.isPresent()) {
-//                    var record = maybeRecord.get();
-//                    record.setStatus(TransactionStatus.DENIED);
-//                    transactionRepository.save(record);
-//                }
-//
-//                return;
-//            } else {
-//                System.out.println("Valid credential!");
-//            }
-//        }
-//
-//        long listEnd = System.nanoTime();
-//        System.out.println("Status list time: " + (listEnd - listStart) / 1_000_000 + " ms");
+        if (statusObject != null && statusObject.containsKey("status_list")) {
+            Map<String, Object> statusList = (Map<String, Object>) statusObject.get("status_list");
 
+            int index = Integer.parseInt(statusList.get("idx").toString());
+            String url = statusList.get("uri").toString();
+
+            boolean isValid = statusListService.isCredentialValid(index, url);
+            if (!isValid) {
+                System.out.println("Credential has been revoked. Skipping further validation.");
+
+                var maybeRecord = transactionRepository.findByPresentationDefinitionId(presentationDefinitionId);
+                if (maybeRecord.isPresent()) {
+                    var record = maybeRecord.get();
+                    record.setStatus(TransactionStatus.DENIED);
+                    transactionRepository.save(record);
+                }
+
+                return;
+            } else {
+                System.out.println("Valid credential!");
+            }
+        }
 
         List<String> sdHashes = (List<String>) payload.get("_sd");
         if (sdHashes == null) {

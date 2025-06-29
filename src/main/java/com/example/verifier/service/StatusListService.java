@@ -87,7 +87,6 @@ public class StatusListService {
                 JsonNode root = mapper.readTree(is);
                 jwtString = root.get("jwt").asText();
             }
-
             SignedJWT jwt = SignedJWT.parse(jwtString);
 
             String certB64 = jwt.getHeader().getX509CertChain().get(0).toString();

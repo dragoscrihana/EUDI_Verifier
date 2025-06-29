@@ -12,7 +12,7 @@ PRIVATE_KEY = os.getenv("PRIVATE_KEY")
 # ✅ Hardcoded values from your input
 CONTRACT_ADDRESS = "0x84a83892cb0608c5dfDa5EBD7398d2c3EfF0988d"
 ISSUER_ADDRESS = "0xC887f232c81c4609CF98857c6Fe55FDE8d24f418"
-SAVE_METHOD = 0
+SAVE_METHOD = 1
 
 # Paste the ABI JSON directly below
 ABI_JSON = json.dumps([
