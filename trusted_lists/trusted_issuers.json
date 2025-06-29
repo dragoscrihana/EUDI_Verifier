@@ -1,0 +1,180 @@
+{
+  "trust_list": [
+    {
+      "id": "did:example:issuer:ro:adr",
+      "type": ["pid_issuer"],
+      "status": "granted",
+      "name": "Autoritatea pentru Digitalizarea României PID Issuer",
+      "country": "RO",
+      "valid_from": "2025-01-01T00:00:00Z",
+      "valid_until": "2026-12-31T23:59:59Z",
+      "public_keys": ["https://adr.gov.ro/keys/jwks.json"],
+      "service_endpoints": {
+        "openid4vci": "https://adr.gov.ro/oid4vci",
+        "status": "https://adr.gov.ro/statuslist.json"
+      },
+      "policy_uri": "https://adr.gov.ro/vc-policy",
+      "credential_types_offered": ["PIDCredential"]
+    },
+    {
+        "id": "https://issuer.myddns.me/issuer-server",
+        "type": ["pid_issuer", "univ_grad_issuer"],
+        "status": "granted",
+        "name": "MyDDNS Test Issuer Server",
+        "country": "RO",
+        "valid_from": "2025-06-29T00:00:00Z",
+        "valid_until": "2026-06-29T00:00:00Z",
+        "certificate": "-----BEGIN CERTIFICATE-----\nMIIBdzCCAR2gAwIBAgIIZhMS5cnM1cYwCgYIKoZIzj0EAwIwNzELMAkGA1UEBhMCUk8xDDAKBgNVBAoTA0FUTTEaMBgGA1UEAxMRQ3JlZGVudGlhbCBJc3N1ZXIwHhcNMjUwNTE0MTUxNjQ3WhcNMjYwNTE0MTUxNjQ3WjA3MQswCQYDVQQGEwJSTzEMMAoGA1UEChMDQVRNMRowGAYDVQQDExFDcmVkZW50aWFsIElzc3VlcjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABK5luifT0bQm1xgsXxZL4DYO0i8Zglxj9blNmOKKz0EN5ETjQd6iwSumobTOM1o/fNrC6sbuv4jBVGYhP19BsDCjEzARMA8GA1UdEQQIMAaHBMCoAYkwCgYIKoZIzj0EAwIDSAAwRQIhAI3WI4mvTSAgxuGprg3KDdKQ7+sgB8FKkb2pYkmNTWQQAiBI3CVMwcGjclURPCYsCZEbAsfyDkXauwLVhOv8zkss4w==\n-----END CERTIFICATE-----",
+        "service_endpoints": {
+            "openid4vci": "https://issuer.myddns.me/ipfs/",
+            "status": "https://issuer.myddns.me/revocation-list"
+        },
+        "policy_uri": "https://issuer.myddns.me/vc-policy",
+        "credential_types_offered": ["urn:eu.europa.ec.eudi:pid:1", "urn:org:certsign:university:graduation:1"]
+    },
+    {
+      "id": "did:example:issuer:de:bnetza",
+      "type": ["pid_issuer"],
+      "status": "granted",
+      "name": "Bundesnetzagentur PID Issuer",
+      "country": "DE",
+      "valid_from": "2025-04-10T00:00:00Z",
+      "valid_until": "2026-04-10T00:00:00Z",
+      "public_keys": ["https://bnetza.de/keys/jwks.json"],
+      "service_endpoints": {
+        "openid4vci": "https://bnetza.de/oid4vci",
+        "status": "https://bnetza.de/statuslist.json"
+      },
+      "policy_uri": "https://bnetza.de/vc-policy",
+      "credential_types_offered": ["PIDCredential"]
+    },
+    {
+      "id": "did:example:issuer:fr:anssi",
+      "type": ["pid_issuer"],
+      "status": "revoked",
+      "name": "ANSSI PID Issuer",
+      "country": "FR",
+      "valid_from": "2024-03-01T00:00:00Z",
+      "valid_until": "2025-03-01T00:00:00Z",
+      "public_keys": ["https://anssi.fr/keys/jwks.json"],
+      "service_endpoints": {
+        "openid4vci": "https://anssi.fr/oid4vci",
+        "status": "https://anssi.fr/statuslist.json"
+      },
+      "policy_uri": "https://anssi.fr/vc-policy",
+      "credential_types_offered": ["PIDCredential"]
+    },
+    {
+      "id": "did:example:issuer:ro:unibuc",
+      "type": ["univ_grad_issuer"],
+      "status": "granted",
+      "name": "Universitatea din București Grad Issuer",
+      "country": "RO",
+      "valid_from": "2025-02-01T00:00:00Z",
+      "valid_until": "2026-02-01T00:00:00Z",
+      "public_keys": ["https://unibuc.ro/keys/jwks.json"],
+      "service_endpoints": {
+        "openid4vci": "https://unibuc.ro/oid4vci",
+        "status": "https://unibuc.ro/statuslist.json"
+      },
+      "policy_uri": "https://unibuc.ro/vc-policy",
+      "credential_types_offered": ["DiplomaCredential"]
+    },
+    {
+      "id": "did:example:issuer:de:uni-berlin",
+      "type": ["univ_grad_issuer"],
+      "status": "granted",
+      "name": "Freie Universität Berlin Grad Issuer",
+      "country": "DE",
+      "valid_from": "2025-03-15T00:00:00Z",
+      "valid_until": "2026-03-15T00:00:00Z",
+      "public_keys": ["https://fu-berlin.de/keys/jwks.json"],
+      "service_endpoints": {
+        "openid4vci": "https://fu-berlin.de/oid4vci",
+        "status": "https://fu-berlin.de/statuslist.json"
+      },
+      "policy_uri": "https://fu-berlin.de/vc-policy",
+      "credential_types_offered": ["DiplomaCredential"]
+    },
+    {
+      "id": "did:example:issuer:fr:sorbonne",
+      "type": ["univ_grad_issuer"],
+      "status": "granted",
+      "name": "Université Paris-Sorbonne Grad Issuer",
+      "country": "FR",
+      "valid_from": "2025-05-10T00:00:00Z",
+      "valid_until": "2026-05-10T00:00:00Z",
+      "public_keys": ["https://sorbonne.fr/keys/jwks.json"],
+      "service_endpoints": {
+        "openid4vci": "https://sorbonne.fr/oid4vci",
+        "status": "https://sorbonne.fr/statuslist.json"
+      },
+      "policy_uri": "https://sorbonne.fr/vc-policy",
+      "credential_types_offered": ["DiplomaCredential"]
+    },
+    {
+      "id": "did:example:issuer:es:upm",
+      "type": ["pid_issuer", "univ_grad_issuer"],
+      "status": "granted",
+      "name": "Universidad Politécnica de Madrid PID & Grad Issuer",
+      "country": "ES",
+      "valid_from": "2025-01-20T00:00:00Z",
+      "valid_until": "2026-12-31T00:00:00Z",
+      "public_keys": ["https://upm.es/keys/jwks.json"],
+      "service_endpoints": {
+        "openid4vci": "https://upm.es/oid4vci",
+        "status": "https://upm.es/statuslist.json"
+      },
+      "policy_uri": "https://upm.es/vc-policy",
+      "credential_types_offered": ["PIDCredential", "DiplomaCredential"]
+    },
+    {
+      "id": "did:example:issuer:it:polimi",
+      "type": ["pid_issuer", "univ_grad_issuer"],
+      "status": "granted",
+      "name": "Politecnico di Milano PID & Grad Issuer",
+      "country": "IT",
+      "valid_from": "2025-06-01T00:00:00Z",
+      "valid_until": "2027-06-01T00:00:00Z",
+      "public_keys": ["https://polimi.it/keys/jwks.json"],
+      "service_endpoints": {
+        "openid4vci": "https://polimi.it/oid4vci",
+        "status": "https://polimi.it/statuslist.json"
+      },
+      "policy_uri": "https://polimi.it/vc-policy",
+      "credential_types_offered": ["PIDCredential", "DiplomaCredential"]
+    },
+    {
+      "id": "did:example:issuer:gr:uoa",
+      "type": ["univ_grad_issuer"],
+      "status": "pending",
+      "name": "University of Athens Grad Issuer",
+      "country": "GR",
+      "valid_from": "2025-04-01T00:00:00Z",
+      "valid_until": "2026-04-01T00:00:00Z",
+      "public_keys": ["https://uoa.gr/keys/jwks.json"],
+      "service_endpoints": {
+        "openid4vci": "https://uoa.gr/oid4vci",
+        "status": "https://uoa.gr/statuslist.json"
+      },
+      "policy_uri": "https://uoa.gr/vc-policy",
+      "credential_types_offered": ["DiplomaCredential"]
+    },
+    {
+      "id": "did:example:issuer:nl:uu",
+      "type": ["univ_grad_issuer"],
+      "status": "granted",
+      "name": "Utrecht University Grad Issuer",
+      "country": "NL",
+      "valid_from": "2025-07-01T00:00:00Z",
+      "valid_until": "2026-07-01T00:00:00Z",
+      "public_keys": ["https://uu.nl/keys/jwks.json"],
+      "service_endpoints": {
+        "openid4vci": "https://uu.nl/oid4vci",
+        "status": "https://uu.nl/statuslist.json"
+      },
+      "policy_uri": "https://uu.nl/vc-policy",
+      "credential_types_offered": ["DiplomaCredential"]
+    }
+  ]
+}
