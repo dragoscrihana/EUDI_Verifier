@@ -142,7 +142,6 @@ public class CascadeRevocationService {
 
     private IpfsStatusList fetchAndCacheStatusList(String uri, String sanitizedIssuer) {
         try {
-            System.out.println("Cache IPFS");
             String jwtString = fetchStringFromUrl(uri);
 
             SignedJWT jwt = SignedJWT.parse(jwtString);

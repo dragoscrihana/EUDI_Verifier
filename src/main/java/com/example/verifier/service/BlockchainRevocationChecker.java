@@ -46,7 +46,6 @@ public class BlockchainRevocationChecker {
 
             String pointerHash = crl.get("pointerHash").toString();
 
-            System.out.println("In primul pe blob");
             RevocationResult blobResult = cascadeRevocationService.isRevokedViaBlob(pointerHash, index, issuerName);
 
             if (blobResult.isFallbackNeeded()) {

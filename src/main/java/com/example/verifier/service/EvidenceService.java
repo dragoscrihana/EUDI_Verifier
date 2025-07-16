@@ -18,7 +18,7 @@ public class EvidenceService {
         this.transactionRepository = transactionRepository;
     }
 
-    public void logTransactionInitialized(String transactionId, long timestamp, String requestUri) {
+    public void logTransactionInitialized(String transactionId, long timestamp, String requestUri, String preffered_username) {
 
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new IllegalArgumentException("Transaction not found: " + transactionId));
@@ -30,7 +30,7 @@ public class EvidenceService {
         payload.put("request_uri", requestUri);
         payload.put("request_uri_method", "get");
 
-        Event event = new Event(timestamp, "Transaction initialized", "Verifier", payload);
+        Event event = new Event(timestamp, "Transaction initialized", preffered_username, payload);
         transaction.addEvent(event);
         transactionRepository.save(transaction);
     }

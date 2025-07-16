@@ -98,51 +98,51 @@ public class WalletResponseValidator {
             Map<String, Object> statusObject = (Map<String, Object>) payload.get("status");
             String issuer = (String) payload.get("iss");
 
-//            if (statusObject != null && statusObject.containsKey("blockchain_list")) {
-//                Map<String, Object> blockchainList = (Map<String, Object>) statusObject.get("blockchain_list");
-//
-//                ObjectMapper mapper = new ObjectMapper();
-//
-//                String contractAddress = blockchainList.get("contract_address").toString();
-//                String abiJson = mapper.writeValueAsString(blockchainList.get("abi"));
-//                String abiBase64 = Base64.getEncoder().encodeToString(abiJson.getBytes(StandardCharsets.UTF_8));
-//                String issuerAddress = blockchainList.get("issuer_address").toString();
-//                int index = Integer.parseInt(blockchainList.get("idx").toString());
-//
-//                boolean revoked = blockchainRevocationChecker.checkRevocationViaBlockchain(
-//                        contractAddress,
-//                        abiBase64,
-//                        issuerAddress,
-//                        index,
-//                        issuer
-//                );
-//
-//                if (revoked) {
-//                    System.out.println("Credential revoked via blockchain+IPFS.");
-//
-//                    updateTransactionStatus(presentationDefinitionId, TransactionStatus.DENIED);
-//                    return;
-//                } else {
-//                    System.out.println("Credential not revoked via blockchain+IPFS.");
-//                }
-//            }
-//
-//            if (statusObject != null && statusObject.containsKey("status_list")) {
-//                Map<String, Object> statusList = (Map<String, Object>) statusObject.get("status_list");
-//
-//                int index = Integer.parseInt(statusList.get("idx").toString());
-//                String url = statusList.get("uri").toString();
-//
-//                boolean isValid = statusListService.isCredentialValid(index, url);
-//                if (!isValid) {
-//                    System.out.println("Credential has been revoked. Skipping further validation.");
-//
-//                    updateTransactionStatus(presentationDefinitionId, TransactionStatus.DENIED);
-//                    return;
-//                } else {
-//                    System.out.println("Valid credential!");
-//                }
-//            }
+            Map<String, Object> statusList = (Map<String, Object>) statusObject.get("status_list");
+
+            int index = Integer.parseInt(statusList.get("idx").toString());
+            String url = statusList.get("uri").toString();
+
+            if (statusObject != null && statusObject.containsKey("blockchain_list")) {
+                Map<String, Object> blockchainList = (Map<String, Object>) statusObject.get("blockchain_list");
+
+                ObjectMapper mapper = new ObjectMapper();
+
+                String contractAddress = blockchainList.get("contract_address").toString();
+                String abiJson = mapper.writeValueAsString(blockchainList.get("abi"));
+                String abiBase64 = Base64.getEncoder().encodeToString(abiJson.getBytes(StandardCharsets.UTF_8));
+                String issuerAddress = blockchainList.get("issuer_address").toString();
+
+                boolean revoked = blockchainRevocationChecker.checkRevocationViaBlockchain(
+                        contractAddress,
+                        abiBase64,
+                        issuerAddress,
+                        index,
+                        issuer
+                );
+
+                if (revoked) {
+                    System.out.println("Credential revoked via blockchain+IPFS.");
+
+                    updateTransactionStatus(presentationDefinitionId, TransactionStatus.DENIED);
+                    return;
+                } else {
+                    System.out.println("Credential not revoked via blockchain+IPFS.");
+                }
+            }
+
+            if (statusObject != null && statusObject.containsKey("status_list")) {
+
+                boolean isValid = statusListService.isCredentialValid(index, url);
+                if (!isValid) {
+                    System.out.println("Credential has been revoked. Skipping further validation.");
+
+                    updateTransactionStatus(presentationDefinitionId, TransactionStatus.DENIED);
+                    return;
+                } else {
+                    System.out.println("Valid credential!");
+                }
+            }
 
             List<String> sdHashes = (List<String>) payload.get("_sd");
             if (sdHashes == null) {
